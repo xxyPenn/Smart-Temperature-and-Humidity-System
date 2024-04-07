@@ -10,24 +10,26 @@
 #define DHT_SENSOR_PIN D1 // assign name of variable and pin number
 DHT dht( DHT_SENSOR_PIN, DHT_SENSOR_TYPE ); //command specific to library
 
+// ---------------------Adafruit Setup-------------------------------------
 // set up the 'soil_moisture', 'temperatureDHT' and 'humidityDHT' feeds
 AdafruitIO_Feed *soil_moisture  = io.feed("soil_moisture");
 AdafruitIO_Feed *temperatureDHT = io.feed("temperatureDHT");
 AdafruitIO_Feed *humidityDHT = io.feed("humidityDHT");
+// ------------------------------------------------------------------------
 
 // these correspond to the pins on your NodeMCU
-#define pumpPin D2    //D2 in Node MCU to drive watering pump
-#define threshold 700 //after tinkering with your moisture sensor, feel free to change 'threshold' to a desired value
+#define fanPin D2    //D2 in Node MCU to drive watering pump
+#define threshold 20 //after tinkering with your moisture sensor, feel free to change 'threshold' to a desired value
 
-int sm = 0;
+int moisture = 0;
 float temperature = 0; //float variables allow for decimals
 float humidity = 0;
 
 void send_sm_Sensor()
 {
-  sm = analogRead(A0); //input from soil moisture sensor
+  moisture = analogRead(A0); //input from soil moisture sensor
 
-  soil_moisture->save(sm);
+  soil_moisture->save(moisture);
   delay(2000);
 }
 
@@ -39,39 +41,40 @@ void send_dht_Sensor()
     humidity = dht.readHumidity();
     // Read temperature as Celsius (the default)
     temperature = dht.readTemperature();
-
-    // Check if any reads failed and exit early (to try again).
-    if (isnan(humidity) || isnan(temperature)) {
-      delay(1000);
-      }
-    else {
-      temperatureDHT->save(temperature);
-      delay(2000);
-      humidityDHT->save(humidity);
-      delay(2000);
-    }   
+    Serial.println(humidity);
+    // // Check if any reads failed and exit early (to try again).
+    // if (isnan(humidity) || isnan(temperature)) {
+    //   delay(1000);
+    //   }
+    // else {
+    //   temperatureDHT->save(temperature);
+    //   delay(2000);
+    //   humidityDHT->save(humidity);
+    //   delay(2000);
+    // }   
  
 }
 
-void water_plant ()
+void demoisturize ()
 {
-  if(sm < threshold) //this means soil is wet and doesn't need to be watered
+  if(humidity < threshold) //this means soil is wet and doesn't need to be watered
   {
-    digitalWrite (pumpPin , LOW);
+    Serial.println("no need to demois");
+    digitalWrite (fanPin , LOW);
     delay(3000);
   }
   else
   {
-    digitalWrite (pumpPin , HIGH);
+    Serial.println("demois");
+    digitalWrite (fanPin , HIGH);
     delay(3000);
-    digitalWrite (pumpPin, LOW); //prevent pump from staying on
+    digitalWrite (fanPin, LOW); //prevent pump from staying on
   }
 }
 
 void setup() {
   // declare pins as inputs and outputs
-  pinMode (pumpPin, OUTPUT );
-   
+  pinMode (fanPin, OUTPUT );
   // start the serial connection
   Serial.begin(115200);
 
@@ -81,17 +84,17 @@ void setup() {
   Serial.print("Connecting to Adafruit IO");
 
   // connect to io.adafruit.com
-  io.connect();
+  // io.connect();
 
   // wait for a connection
-  while(io.status() < AIO_CONNECTED) {
-    Serial.print(".");
-    delay(500);
-  }
+  // while(io.status() < AIO_CONNECTED) {
+  //   Serial.print(".");
+  //   delay(500);
+  // }
 
   // we are connected
-  Serial.println();
-  Serial.println(io.statusText());
+  // Serial.println();
+  // Serial.println(io.statusText());
 
 }
 
@@ -106,10 +109,10 @@ void loop() {
   // send soil moisture data
   // Adafruit IO is rate limited for publishing, so a delay is required in
   // between feed->save events. 
-  send_sm_Sensor();
-  delay(2000);
+  // send_sm_Sensor();
+  // delay(2000);
+  // send_dht_Sensor();
+  // delay(2000);
   send_dht_Sensor();
-  delay(2000);
-
-  //water_plant(); 
+  demoisturize(); 
 }
